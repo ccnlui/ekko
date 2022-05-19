@@ -1,7 +1,9 @@
 package main
 
-import "log"
+import (
+	"echamber/cmd"
+)
 
 func main() {
-	log.Println("echamber!")
+	cmd.Execute()
 }
