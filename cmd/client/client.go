@@ -7,3 +7,7 @@ var Cmd = &cobra.Command{
 	Use:   "client",
 	Short: "Send messages to server, and measure RTT latency in microseconds",
 }
+
+func init() {
+	Cmd.AddCommand(AeronCmd)
+}
