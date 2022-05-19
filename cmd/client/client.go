@@ -2,8 +2,8 @@ package client
 
 import "github.com/spf13/cobra"
 
-// Cmd is the echamber client command
+// Cmd is the ekko client command
 var Cmd = &cobra.Command{
 	Use:   "client",
-	Short: "echo client",
+	Short: "client that sends messages to server, and measure RTT latency in microseconds",
 }

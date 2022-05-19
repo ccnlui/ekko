@@ -1,7 +1,7 @@
 package main
 
 import (
-	"echamber/cmd"
+	"ekko/cmd"
 )
 
 func main() {

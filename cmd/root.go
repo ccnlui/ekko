@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"context"
-	"echamber/cmd/client"
+	"ekko/cmd/client"
+	"ekko/cmd/server"
 	"fmt"
 	"log"
 	"os"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	envPrefix = "ECHAMBER"
+	envPrefix = "ekko"
 )
 
 // global flags
@@ -46,7 +47,7 @@ func Execute() {
 
 func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "echamber",
+		Use:   "ekko",
 		Short: "Marketdata message transport RTT benchmark tool",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := initConfig(cmd); err != nil {
@@ -61,6 +62,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	rootCmd.AddCommand(client.Cmd)
+	rootCmd.AddCommand(server.Cmd)
 	return rootCmd
 }
 
@@ -71,7 +73,7 @@ func initConfig(cmd *cobra.Command) error {
 	} else {
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("$HOME")
-		viper.SetConfigName(".echamber")
+		viper.SetConfigName(".ekko")
 		viper.SetConfigType("yaml")
 
 		if err := viper.ReadInConfig(); err != nil {

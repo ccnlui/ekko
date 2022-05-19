@@ -1,4 +1,4 @@
-module echamber
+module ekko
 
 go 1.18
 
