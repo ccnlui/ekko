@@ -13,6 +13,7 @@ var AeronCmd = &cobra.Command{
 	Short: "aeron transport",
 	Run: func(cmd *cobra.Command, args []string) {
 		n := echonode.NewEchoNode("aeron")
+		defer n.Close()
 		n.Run(cmd.Context())
 	},
 }

@@ -14,6 +14,7 @@ var AeronCmd = &cobra.Command{
 	Short: "aeron transport",
 	Run: func(cmd *cobra.Command, args []string) {
 		t := transceiver.NewTransceiver("aeron")
+		defer t.Close()
 		loadtestrig.Run(cmd.Context(), t)
 	},
 }

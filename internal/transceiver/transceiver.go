@@ -5,7 +5,6 @@ import (
 )
 
 type Transceiver interface {
-	Init()
 	SendAndReceive(msg []byte, num int)
 	Close()
 }

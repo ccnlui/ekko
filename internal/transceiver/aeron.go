@@ -29,15 +29,17 @@ func NewAeronTransceiver() *AeronTransceiver {
 	td := delayer{
 		interval: tmr.Nanoseconds(),
 	}
-	return &AeronTransceiver{
+	tcv := &AeronTransceiver{
 		quoteMsgRate: qmr,
 		tradeMsgRate: tmr,
 		quoteDelayer: qd,
 		tradeDelayer: td,
 	}
+	tcv.init()
+	return tcv
 }
 
-func (tcv *AeronTransceiver) Init() {
+func (tcv *AeronTransceiver) init() {
 	aeronCtx := aeron.NewContext().AeronDir(config.AeronDir)
 	a, err := aeron.Connect(aeronCtx)
 	if err != nil {

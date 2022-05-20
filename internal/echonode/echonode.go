@@ -7,6 +7,7 @@ import (
 
 type EchoNode interface {
 	Run(ctx context.Context)
+	Close()
 }
 
 func NewEchoNode(transport string) EchoNode {
