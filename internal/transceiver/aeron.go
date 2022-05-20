@@ -78,7 +78,8 @@ func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num
 				outBuf := atomic.MakeBuffer([]byte(msg))
 
 				var res int64
-				for res = tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil); res <= 0; {
+				for res <= 0 {
+					res = tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil)
 					if !retryPublicationResult(res) {
 						dropped += 1
 						break
@@ -88,7 +89,7 @@ func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num
 			}
 		}
 	}
-	log.Printf("[info] sent %v messages", count)
+	log.Printf("[info] messages sent: %v dropped: %v", count, dropped)
 }
 
 func retryPublicationResult(res int64) bool {
