@@ -180,8 +180,8 @@ func (tcv *AeronTransceiver) SendWithNoRetry(msg []byte, num int) int {
 
 	for i := 0; i < num; i++ {
 		res := tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil)
-		if util.CheckPublicationResult(res) != nil {
-			log.Println("[debug] dropped:", util.PublicationErrorString(res), msg)
+		if err := util.CheckPublicationResult(res); err != nil {
+			log.Println("[error]", err)
 			break
 		}
 		if res > 0 {
