@@ -1,11 +1,12 @@
 package transceiver
 
 import (
+	"context"
 	"log"
 )
 
 type Transceiver interface {
-	SendAndReceive(msg []byte, num int)
+	SendAndReceive(ctx context.Context, msg []byte, num int)
 	Close()
 }
 

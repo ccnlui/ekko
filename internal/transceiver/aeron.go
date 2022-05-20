@@ -1,7 +1,9 @@
 package transceiver
 
 import (
+	"context"
 	"ekko/internal/config"
+	"fmt"
 	"log"
 	"time"
 
@@ -57,15 +59,22 @@ func (tcv *AeronTransceiver) Close() {
 	}
 }
 
-func (tcv *AeronTransceiver) SendAndReceive(msg []byte, num int) {
+func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num int) {
 
 	count := 0
 	for count < num {
 
+		if ctx.Err() != nil {
+			fmt.Println("Bye!")
+			return
+		}
+
 		now := time.Now().UnixNano()
 		if tcv.quoteDelayer.onScheduleSend(now) {
-			log.Println("send:", string(msg))
-			count += 1
+
+			msg := time.Now().Local().String()
+			log.Println("[info] msg", msg)
+
 		}
 
 	}
