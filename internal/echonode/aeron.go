@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"ekko/internal/config"
+	"ekko/internal/util"
 	"fmt"
 	"log"
 	"time"
@@ -63,19 +64,32 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 	log.Println("[info] running aeron echo node!")
 
 	inBuf := &bytes.Buffer{}
-	count := 1
+	piped := 0
+	dropped := 0
 	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
 		// Don't create new bytes everytime. This is only an example
 		// bytes := buffer.GetBytesArray(offset, length)
 
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
-			count, offset, length,
-			string(inBuf.Next(int(length))),
-		)
+		// log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
+		// 	piped, offset, length,
+		// 	string(inBuf.Next(int(length))),
+		// )
 
-		count += 1
+		var res int64
+		for {
+			if res = node.pub.Offer(buffer, offset, length, nil); res > 0 {
+				piped += 1
+				log.Printf("[debug] piped: %v size: %v", piped, length)
+				break
+			}
+			if !util.RetryPublicationResult(res) {
+				dropped += 1
+				log.Println("[debug] dropped:", util.PublicationErrorString(res), string(inBuf.Next(int(length))))
+				break
+			}
+		}
 	}
 	assembler := aeron.NewFragmentAssembler(onMessage, 512)
 

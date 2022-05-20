@@ -1,0 +1,4 @@
+package transceiver
+
+const NANOS_PER_SECOND = 1_000_000_000
+const RECEIVE_DEADLINE_NS = 30_000_000_000

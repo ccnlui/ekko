@@ -1,14 +1,17 @@
 package transceiver
 
 import (
+	"bytes"
 	"context"
 	"ekko/internal/config"
-	"fmt"
+	"ekko/internal/util"
 	"log"
 	"time"
 
 	"github.com/lirm/aeron-go/aeron"
 	"github.com/lirm/aeron-go/aeron/atomic"
+	"github.com/lirm/aeron-go/aeron/idlestrategy"
+	"github.com/lirm/aeron-go/aeron/logbuffer"
 )
 
 type AeronTransceiver struct {
@@ -21,6 +24,8 @@ type AeronTransceiver struct {
 	aeron *aeron.Aeron
 	pub   *aeron.Publication
 	sub   *aeron.Subscription
+
+	assembler *aeron.FragmentAssembler
 }
 
 func NewAeronTransceiver() *AeronTransceiver {
@@ -63,6 +68,16 @@ func (tcv *AeronTransceiver) init() {
 		time.Sleep(time.Millisecond)
 	}
 	log.Println("[info] subscription connected to media driver:", tcv.sub)
+
+	inBuf := &bytes.Buffer{}
+	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
+		inBuf.Reset()
+		buffer.WriteBytes(inBuf, offset, length)
+		log.Printf("[info] Got a fragment offset: %d length: %d payload: %s\n",
+			offset, length, string(inBuf.Next(int(length))),
+		)
+	}
+	tcv.assembler = aeron.NewFragmentAssembler(onMessage, 512)
 }
 
 func (tcv *AeronTransceiver) Close() {
@@ -77,68 +92,118 @@ func (tcv *AeronTransceiver) Close() {
 	}
 }
 
-func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num int) {
+func (tcv *AeronTransceiver) SendAndReceive(
+	ctx context.Context, msg []byte,
+	iterations int, numMsg int,
+) int {
 
-	sent := 0
-	dropped := 0
-	for sent < num {
+	var (
+		startTimeNs      int64 = time.Now().UnixNano()
+		endTimeNs        int64 = startTimeNs + int64(iterations)*NANOS_PER_SECOND
+		sendIntervalNs   int64 = NANOS_PER_SECOND / int64(numMsg)
+		nextSendTimeNs   int64 = startTimeNs
+		nextReportTimeNs int64 = startTimeNs + NANOS_PER_SECOND
+		nowNs            int64 = startTimeNs
 
-		if ctx.Err() != nil {
-			fmt.Println("Bye!")
-			return
+		totalNumMsg int = iterations * numMsg
+		sentMsg     int = 0
+		rcvdMsg     int = 0
+		batchSize   int = config.BatchSize
+	)
+
+	idleStrategy := idlestrategy.Busy{}
+	for {
+
+		sent := tcv.SendWithNoRetry(msg, batchSize)
+		sentMsg += sent
+		if totalNumMsg == sentMsg {
+			reportProgress(startTimeNs, nowNs, sentMsg)
+			break
 		}
 
-		if tcv.pub.IsConnected() {
-			now := time.Now().UnixNano()
-			if tcv.quoteDelayer.onScheduleSend(now) {
+		nowNs = time.Now().UnixNano()
+		if sent == batchSize {
 
-				// msg := time.Now().Local().String()
-				outBuf := atomic.MakeBuffer([]byte(msg))
+			// next batch
+			batchSize = util.Min(totalNumMsg-sentMsg, config.BatchSize)
+			nextSendTimeNs += sendIntervalNs
 
-				var res int64
-				for {
-					if res = tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil); res > 0 {
-						sent += 1
-						log.Printf("[debug] sent: %v size: %v", sent, len(msg))
-						break
-					}
-					if !retryPublicationResult(res) {
-						dropped += 1
-						log.Println("[debug] dropped:", publicationErrorString(res), msg)
-						break
-					}
+			// receive batch size
+			for nowNs < nextSendTimeNs && nowNs < endTimeNs {
+				switch {
+				case rcvdMsg < sentMsg:
+					rcvd := tcv.Receive()
+					rcvdMsg += rcvd
+					idleStrategy.Idle(rcvd)
+
+				default:
+					// received batch already
+					idleStrategy.Idle(0)
 				}
+
+				nowNs = time.Now().UnixNano()
 			}
+
+		} else {
+			// next batch
+			batchSize -= sent
+			rcvdMsg += tcv.Receive()
+		}
+
+		if ctx.Err() != nil || nowNs >= endTimeNs {
+			break
+		}
+		if nowNs >= nextReportTimeNs {
+			elapsedSec := reportProgress(startTimeNs, nowNs, sentMsg)
+			nextReportTimeNs = startTimeNs + int64((elapsedSec+1)*NANOS_PER_SECOND)
 		}
 	}
-	log.Printf("[info] messages sent: %v dropped: %v", sent, dropped)
-}
 
-func retryPublicationResult(res int64) bool {
-	switch res {
-	case aeron.AdminAction, aeron.BackPressured:
-		// log.Println("[debug] retry offer:", publicationErrorString(res))
-		return true
-	case aeron.NotConnected, aeron.MaxPositionExceeded, aeron.PublicationClosed:
-		log.Println("[error] failed to offer", publicationErrorString(res))
-		return false
+	// receive before exit
+	deadline := time.Now().UnixNano() + RECEIVE_DEADLINE_NS
+	for rcvdMsg < sentMsg {
+		rcvd := tcv.Receive()
+		rcvdMsg += rcvd
+		idleStrategy.Idle(rcvd)
+		if time.Now().UnixNano() >= deadline {
+			log.Printf("[warn] not all messages were received after %ds deadline", RECEIVE_DEADLINE_NS/NANOS_PER_SECOND)
+			break
+		}
 	}
-	return false
+	log.Printf("[info] messages sent: %v", sentMsg)
+	return sentMsg
 }
 
-func publicationErrorString(res int64) string {
-	switch res {
-	case aeron.AdminAction:
-		return "ADMIN_ACTION"
-	case aeron.BackPressured:
-		return "BACK_PRESSURED"
-	case aeron.PublicationClosed:
-		return "CLOSED"
-	case aeron.NotConnected:
-		return "NOT_CONNECTED"
-	case aeron.MaxPositionExceeded:
-		return "MAX_POSITION_EXCEEDED"
+func (tcv *AeronTransceiver) SendWithNoRetry(msg []byte, num int) int {
+	sent := 0
+	outBuf := atomic.MakeBuffer([]byte(msg))
+
+	for i := 0; i < num; i++ {
+		res := tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil)
+		if util.CheckPublicationResult(res) != nil {
+			log.Println("[debug] dropped:", util.PublicationErrorString(res), msg)
+			break
+		}
+		sent += 1
+		log.Printf("[debug] sent: %v size: %v", sent, len(msg))
+	}
+	return sent
+}
+
+func (tcv *AeronTransceiver) Receive() int {
+	fragmentsRead := tcv.sub.Poll(tcv.assembler.OnFragment, 10)
+	return util.Min(fragmentsRead, 1)
+}
+
+func reportProgress(startTimeNs int64, nowNs int64, sentMsg int) int {
+	elapsedSec := int((nowNs - startTimeNs)) / NANOS_PER_SECOND
+	var sendRate int
+	switch elapsedSec {
+	case 0:
+		sendRate = sentMsg
 	default:
-		return "UNKNOWN"
+		sendRate = sentMsg / elapsedSec
 	}
+	log.Printf("[info] send rate %d msg/sec\n", sendRate)
+	return elapsedSec
 }

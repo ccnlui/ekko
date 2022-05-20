@@ -6,7 +6,7 @@ import (
 )
 
 type Transceiver interface {
-	SendAndReceive(ctx context.Context, msg []byte, num int)
+	SendAndReceive(ctx context.Context, msg []byte, iteration int, numMsg int) int
 	Close()
 }
 
