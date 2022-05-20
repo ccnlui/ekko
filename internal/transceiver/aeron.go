@@ -20,6 +20,7 @@ type AeronTransceiver struct {
 
 	aeron *aeron.Aeron
 	pub   *aeron.Publication
+	sub   *aeron.Subscription
 }
 
 func NewAeronTransceiver() *AeronTransceiver {
@@ -50,16 +51,29 @@ func (tcv *AeronTransceiver) init() {
 		log.Fatalln("[fatal] failed to connect to media driver: ", config.AeronDir, err.Error())
 	}
 	tcv.aeron = a
-	tcv.pub = <-a.AddPublication(config.Channel, int32(config.StreamID))
+
+	tcv.pub = <-a.AddPublication(config.ServerChannel, int32(config.ServerStreamID))
 	for !tcv.pub.IsConnected() {
 		time.Sleep(time.Millisecond)
 	}
 	log.Println("[info] publication connected to media driver:", tcv.pub)
+
+	tcv.sub = <-a.AddSubscription(config.ClientChannel, int32(config.ClientStreamID))
+	for !tcv.sub.IsConnected() {
+		time.Sleep(time.Millisecond)
+	}
+	log.Println("[info] subscription connected to media driver:", tcv.sub)
 }
 
 func (tcv *AeronTransceiver) Close() {
 	if tcv.aeron != nil {
 		tcv.aeron.Close()
+	}
+	if tcv.pub != nil {
+		tcv.pub.Close()
+	}
+	if tcv.sub != nil {
+		tcv.sub.Close()
 	}
 }
 

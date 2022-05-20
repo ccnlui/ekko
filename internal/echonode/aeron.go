@@ -17,6 +17,7 @@ import (
 type AeronEchoNode struct {
 	aeron *aeron.Aeron
 	sub   *aeron.Subscription
+	pub   *aeron.Publication
 }
 
 func NewAeronEchoNode() *AeronEchoNode {
@@ -32,11 +33,18 @@ func (node *AeronEchoNode) init() {
 		log.Fatalln("[fatal] failed to connect to media driver: ", config.AeronDir, err.Error())
 	}
 	node.aeron = a
-	node.sub = <-a.AddSubscription(config.Channel, int32(config.StreamID))
+
+	node.sub = <-a.AddSubscription(config.ServerChannel, int32(config.ServerStreamID))
 	for !node.sub.IsConnected() {
 		time.Sleep(time.Millisecond)
 	}
 	log.Println("[info] subscription connected to media driver:", node.sub)
+
+	node.pub = <-a.AddPublication(config.ClientChannel, int32(config.ClientStreamID))
+	for !node.pub.IsConnected() {
+		time.Sleep(time.Millisecond)
+	}
+	log.Println("[info] publication connected to media driver:", node.pub)
 }
 
 func (node *AeronEchoNode) Close() {
@@ -45,6 +53,9 @@ func (node *AeronEchoNode) Close() {
 	}
 	if node.sub != nil {
 		node.sub.Close()
+	}
+	if node.pub != nil {
+		node.pub.Close()
 	}
 }
 
@@ -59,10 +70,11 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
-			count, offset, length,
-			string(inBuf.Next(int(length))),
-		)
+		// log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
+		// 	count, offset, length,
+		// 	string(inBuf.Next(int(length))),
+		// )
+
 		count += 1
 	}
 	assembler := aeron.NewFragmentAssembler(onMessage, 512)
