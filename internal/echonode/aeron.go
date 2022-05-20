@@ -54,12 +54,13 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 	inBuf := &bytes.Buffer{}
 	count := 1
 	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
-		bytes := buffer.GetBytesArray(offset, length)
+		// Don't create new bytes everytime. This is only an example
+		// bytes := buffer.GetBytesArray(offset, length)
+
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		fmt.Printf("%8.d: Got a fragment offset: %d length: %d payload: %s (buf:%s)\n",
+		fmt.Printf("%8.d: Got a fragment offset: %d length: %d payload: %s\n",
 			count, offset, length,
-			string(bytes),
 			string(inBuf.Next(int(length))),
 		)
 		count += 1
