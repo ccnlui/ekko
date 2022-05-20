@@ -72,10 +72,10 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
-			piped, offset, length,
-			string(inBuf.Next(int(length))),
-		)
+		// log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
+		// 	piped, offset, length,
+		// 	string(inBuf.Next(int(length))),
+		// )
 
 		var res int64
 		for {
@@ -93,7 +93,7 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 	}
 	assembler := aeron.NewFragmentAssembler(onMessage, 512)
 
-	idleStrategy := idlestrategy.Sleeping{SleepFor: time.Millisecond}
+	idleStrategy := idlestrategy.Busy{}
 	for {
 		if ctx.Err() != nil {
 			fmt.Println("bye!")

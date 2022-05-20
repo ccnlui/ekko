@@ -3,7 +3,6 @@ package client
 import (
 	"ekko/internal/config"
 	"ekko/internal/loadtestrig"
-	"ekko/internal/transceiver"
 
 	"github.com/lirm/aeron-go/aeron"
 	"github.com/spf13/cobra"
@@ -13,9 +12,7 @@ var AeronCmd = &cobra.Command{
 	Use:   "aeron",
 	Short: "aeron transport",
 	Run: func(cmd *cobra.Command, args []string) {
-		t := transceiver.NewTransceiver("aeron")
-		defer t.Close()
-		loadtestrig.Run(cmd.Context(), t)
+		loadtestrig.Run(cmd.Context(), "aeron")
 	},
 }
 

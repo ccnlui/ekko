@@ -6,13 +6,21 @@ import (
 	"ekko/internal/transceiver"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
+
+	"github.com/HdrHistogram/hdrhistogram-go"
 )
 
-func Run(ctx context.Context, tcv transceiver.Transceiver) {
+func Run(ctx context.Context, transport string) {
+	histogram := hdrhistogram.New(1, 60_000_000_000, 3)
+	t := transceiver.NewTransceiver(transport, histogram)
+	defer t.Close()
+
 	msg := generateMsg(64)
-	tcv.SendAndReceive(ctx, msg, 5, 10)
+	t.SendAndReceive(ctx, msg, 5, 20_000)
 	log.Println("[info] Histogram of RTT latencies in microseconds.")
+	histogram.PercentilesPrint(os.Stdout, 5, 1000.0)
 	fmt.Println("Bye!")
 }
 

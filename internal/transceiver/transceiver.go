@@ -3,6 +3,8 @@ package transceiver
 import (
 	"context"
 	"log"
+
+	"github.com/HdrHistogram/hdrhistogram-go"
 )
 
 type Transceiver interface {
@@ -10,10 +12,10 @@ type Transceiver interface {
 	Close()
 }
 
-func NewTransceiver(transport string) Transceiver {
+func NewTransceiver(transport string, histogram *hdrhistogram.Histogram) Transceiver {
 	switch transport {
 	case "aeron":
-		return NewAeronTransceiver()
+		return NewAeronTransceiver(histogram)
 
 	default:
 		log.Fatal("[fatal] unknown transport", transport)

@@ -3,6 +3,7 @@ module ekko
 go 1.18
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.1.2
 	github.com/lirm/aeron-go v0.0.0-20220419084805-5b532f489021
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5

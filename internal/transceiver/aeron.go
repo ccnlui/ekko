@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/lirm/aeron-go/aeron"
 	"github.com/lirm/aeron-go/aeron/atomic"
 	"github.com/lirm/aeron-go/aeron/idlestrategy"
@@ -27,9 +28,10 @@ type AeronTransceiver struct {
 
 	assembler *aeron.FragmentAssembler
 	rcvdMsg   int
+	histogram *hdrhistogram.Histogram
 }
 
-func NewAeronTransceiver() *AeronTransceiver {
+func NewAeronTransceiver(histogram *hdrhistogram.Histogram) *AeronTransceiver {
 	log.Println("[info] new aeron transport!")
 
 	qmr := config.QuoteMsgRate
@@ -45,6 +47,7 @@ func NewAeronTransceiver() *AeronTransceiver {
 		tradeMsgRate: tmr,
 		quoteDelayer: qd,
 		tradeDelayer: td,
+		histogram:    histogram,
 	}
 	tcv.init()
 	return tcv
@@ -72,13 +75,17 @@ func (tcv *AeronTransceiver) init() {
 
 	inBuf := bytes.NewBuffer(make([]byte, 0, config.MaxMessageSize))
 	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
+		// timestamp
 		timestamp := buffer.GetInt64(offset)
+		tcv.histogram.RecordValue(time.Now().UnixNano() - timestamp)
+
+		// message
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
 		tcv.rcvdMsg += 1
-		log.Printf("[debug] %8.d Got a fragment timestamp: %d offset: %d length: %d payload: %s\n",
-			tcv.rcvdMsg, timestamp, offset, length, string(inBuf.Next(int(length))),
-		)
+		// log.Printf("[debug] %8.d Got a fragment timestamp: %d offset: %d length: %d payload: %s\n",
+		// 	tcv.rcvdMsg, timestamp, offset, length, string(inBuf.Next(int(length))),
+		// )
 	}
 	tcv.assembler = aeron.NewFragmentAssembler(onMessage, 512)
 }
