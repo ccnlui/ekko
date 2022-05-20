@@ -51,7 +51,10 @@ func (tcv *AeronTransceiver) init() {
 	}
 	tcv.aeron = a
 	tcv.pub = <-a.AddPublication(config.Channel, int32(config.StreamID))
-	log.Println("[info] publication:", tcv.pub)
+	for !tcv.pub.IsConnected() {
+		time.Sleep(time.Millisecond)
+	}
+	log.Println("[info] publication connected to media driver:", tcv.pub)
 }
 
 func (tcv *AeronTransceiver) Close() {
@@ -62,14 +65,15 @@ func (tcv *AeronTransceiver) Close() {
 
 func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num int) {
 
-	count := 0
+	sent := 0
 	dropped := 0
-	for count < num {
+	for sent < num {
 
 		if ctx.Err() != nil {
 			fmt.Println("Bye!")
 			return
 		}
+
 		if tcv.pub.IsConnected() {
 			now := time.Now().UnixNano()
 			if tcv.quoteDelayer.onScheduleSend(now) {
@@ -78,24 +82,28 @@ func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num
 				outBuf := atomic.MakeBuffer([]byte(msg))
 
 				var res int64
-				for res <= 0 {
-					res = tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil)
+				for {
+					if res = tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil); res > 0 {
+						sent += 1
+						log.Println("[debug] sent:", sent, msg)
+						break
+					}
 					if !retryPublicationResult(res) {
 						dropped += 1
+						log.Println("[debug] dropped:", publicationErrorString(res), msg)
 						break
 					}
 				}
-				count += 1
 			}
 		}
 	}
-	log.Printf("[info] messages sent: %v dropped: %v", count, dropped)
+	log.Printf("[info] messages sent: %v dropped: %v", sent, dropped)
 }
 
 func retryPublicationResult(res int64) bool {
 	switch res {
 	case aeron.AdminAction, aeron.BackPressured:
-		log.Println("[debug] retry offer:", publicationErrorString(res))
+		// log.Println("[debug] retry offer:", publicationErrorString(res))
 		return true
 	case aeron.NotConnected, aeron.MaxPositionExceeded, aeron.PublicationClosed:
 		log.Println("[error] failed to offer", publicationErrorString(res))

@@ -33,7 +33,10 @@ func (node *AeronEchoNode) init() {
 	}
 	node.aeron = a
 	node.sub = <-a.AddSubscription(config.Channel, int32(config.StreamID))
-	log.Println("[info] subscription:", node.sub)
+	for !node.sub.IsConnected() {
+		time.Sleep(time.Millisecond)
+	}
+	log.Println("[info] subscription connected to media driver:", node.sub)
 }
 
 func (node *AeronEchoNode) Close() {
