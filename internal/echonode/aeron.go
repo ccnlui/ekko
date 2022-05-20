@@ -64,6 +64,11 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 
 	idleStrategy := idlestrategy.Sleeping{SleepFor: time.Millisecond}
 	for {
+		if ctx.Err() != nil {
+			fmt.Println("bye!")
+			return
+		}
+
 		fragmentsRead := node.sub.Poll(handler, 10)
 		idleStrategy.Idle(fragmentsRead)
 	}
