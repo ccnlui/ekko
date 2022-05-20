@@ -59,7 +59,7 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		fmt.Printf("%8.d: Got a fragment offset: %d length: %d payload: %s\n",
+		log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
 			count, offset, length,
 			string(inBuf.Next(int(length))),
 		)
