@@ -26,6 +26,7 @@ type AeronTransceiver struct {
 	sub   *aeron.Subscription
 
 	assembler *aeron.FragmentAssembler
+	rcvdMsg   int
 }
 
 func NewAeronTransceiver() *AeronTransceiver {
@@ -69,15 +70,14 @@ func (tcv *AeronTransceiver) init() {
 	}
 	log.Println("[info] subscription connected to media driver:", tcv.sub)
 
-	echoed := 0
 	inBuf := &bytes.Buffer{}
 	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		echoed += 1
-		log.Printf("[debug] %8.d Got a fragment offset: %d length: %d payload: %s\n",
-			echoed, offset, length, string(inBuf.Next(int(length))),
-		)
+		tcv.rcvdMsg += 1
+		// log.Printf("[debug] %8.d Got a fragment offset: %d length: %d payload: %s\n",
+		// 	tcv.rcvdMsg, offset, length, string(inBuf.Next(int(length))),
+		// )
 	}
 	tcv.assembler = aeron.NewFragmentAssembler(onMessage, 512)
 }
@@ -109,7 +109,6 @@ func (tcv *AeronTransceiver) SendAndReceive(
 
 		totalNumMsg int = iterations * numMsg
 		sentMsg     int = 0
-		rcvdMsg     int = 0
 		batchSize   int = config.BatchSize
 	)
 
@@ -133,10 +132,9 @@ func (tcv *AeronTransceiver) SendAndReceive(
 			// receive batch size
 			for nowNs < nextSendTimeNs && nowNs < endTimeNs {
 				switch {
-				case rcvdMsg < sentMsg:
-					rcvd := tcv.Receive()
-					rcvdMsg += rcvd
-					idleStrategy.Idle(rcvd)
+				case tcv.rcvdMsg < sentMsg:
+					f := tcv.Receive()
+					idleStrategy.Idle(f)
 
 				default:
 					// received batch already
@@ -149,7 +147,7 @@ func (tcv *AeronTransceiver) SendAndReceive(
 		} else {
 			// next batch
 			batchSize -= sent
-			rcvdMsg += tcv.Receive()
+			tcv.Receive()
 		}
 
 		if ctx.Err() != nil || nowNs >= endTimeNs {
@@ -163,11 +161,10 @@ func (tcv *AeronTransceiver) SendAndReceive(
 
 	// receive before exit
 	deadline := time.Now().UnixNano() + RECEIVE_DEADLINE_NS
-	for rcvdMsg < sentMsg {
-		log.Printf("[debug] try receive before exit: received: %d sent: %d\n", rcvdMsg, sentMsg)
-		rcvd := tcv.Receive()
-		rcvdMsg += rcvd
-		idleStrategy.Idle(rcvd)
+	for tcv.rcvdMsg < sentMsg {
+		// log.Printf("[debug] try receive before exit: received: %d sent: %d\n", tcv.rcvdMsg, sentMsg)
+		f := tcv.Receive()
+		idleStrategy.Idle(f)
 		if time.Now().UnixNano() >= deadline {
 			log.Printf("[warn] not all messages were received after %ds deadline", RECEIVE_DEADLINE_NS/NANOS_PER_SECOND)
 			break
