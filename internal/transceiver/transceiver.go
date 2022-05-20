@@ -1,12 +1,22 @@
 package transceiver
 
-import "log"
+import (
+	"log"
+)
 
-func NewTransceiver(transport string) {
+type Transceiver interface {
+	Init()
+	SendAndReceive(msg []byte, num int)
+	Close()
+}
+
+func NewTransceiver(transport string) Transceiver {
 	switch transport {
 	case "aeron":
-		log.Println("[info] new aeron transport!")
+		return NewAeronTransceiver()
+
 	default:
-		log.Println("[error] unknown transport", transport)
+		log.Fatal("[fatal] unknown transport", transport)
 	}
+	return nil
 }

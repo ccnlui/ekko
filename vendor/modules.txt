@@ -1,6 +1,9 @@
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
+# github.com/edsrzf/mmap-go v1.0.0
+## explicit
+github.com/edsrzf/mmap-go
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
@@ -19,6 +22,22 @@ github.com/hashicorp/hcl/json/token
 # github.com/inconshreveable/mousetrap v1.0.0
 ## explicit
 github.com/inconshreveable/mousetrap
+# github.com/lirm/aeron-go v0.0.0-20220419084805-5b532f489021
+## explicit; go 1.12
+github.com/lirm/aeron-go/aeron
+github.com/lirm/aeron-go/aeron/atomic
+github.com/lirm/aeron-go/aeron/broadcast
+github.com/lirm/aeron-go/aeron/command
+github.com/lirm/aeron-go/aeron/counters
+github.com/lirm/aeron-go/aeron/driver
+github.com/lirm/aeron-go/aeron/flyweight
+github.com/lirm/aeron-go/aeron/idlestrategy
+github.com/lirm/aeron-go/aeron/logbuffer
+github.com/lirm/aeron-go/aeron/logbuffer/term
+github.com/lirm/aeron-go/aeron/logging
+github.com/lirm/aeron-go/aeron/ringbuffer
+github.com/lirm/aeron-go/aeron/util
+github.com/lirm/aeron-go/aeron/util/memmap
 # github.com/magiconair/properties v1.8.6
 ## explicit; go 1.13
 github.com/magiconair/properties
@@ -71,10 +90,25 @@ github.com/stretchr/testify/require
 # github.com/subosito/gotenv v1.2.0
 ## explicit
 github.com/subosito/gotenv
+# go.uber.org/atomic v1.7.0
+## explicit; go 1.13
+go.uber.org/atomic
+# go.uber.org/multierr v1.6.0
+## explicit; go 1.12
+go.uber.org/multierr
+# go.uber.org/zap v1.20.0
+## explicit; go 1.13
+go.uber.org/zap
+go.uber.org/zap/buffer
+go.uber.org/zap/internal/bufferpool
+go.uber.org/zap/internal/color
+go.uber.org/zap/internal/exit
+go.uber.org/zap/zapcore
 # golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
+golang.org/x/sys/windows
 # golang.org/x/text v0.3.7
 ## explicit; go 1.17
 golang.org/x/text/transform
