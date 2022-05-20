@@ -16,6 +16,7 @@ type AeronTransceiver struct {
 	tradeDelayer delayer
 
 	aeron *aeron.Aeron
+	pub   *aeron.Publication
 }
 
 func NewAeronTransceiver() *AeronTransceiver {
@@ -46,6 +47,8 @@ func (tcv *AeronTransceiver) init() {
 		log.Fatalln("[fatal] failed to connect to media driver: ", config.AeronDir, err.Error())
 	}
 	tcv.aeron = a
+	tcv.pub = <-a.AddPublication(config.Channel, int32(config.StreamID))
+	log.Println("[info] publication:", tcv.pub)
 }
 
 func (tcv *AeronTransceiver) Close() {
