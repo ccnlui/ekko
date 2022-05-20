@@ -66,14 +66,14 @@ func (tcv *AeronTransceiver) init() {
 }
 
 func (tcv *AeronTransceiver) Close() {
-	if tcv.aeron != nil {
-		tcv.aeron.Close()
-	}
 	if tcv.pub != nil {
 		tcv.pub.Close()
 	}
 	if tcv.sub != nil {
 		tcv.sub.Close()
+	}
+	if tcv.aeron != nil {
+		tcv.aeron.Close()
 	}
 }
 

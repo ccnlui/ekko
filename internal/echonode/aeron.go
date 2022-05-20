@@ -48,14 +48,14 @@ func (node *AeronEchoNode) init() {
 }
 
 func (node *AeronEchoNode) Close() {
-	if node.aeron != nil {
-		node.aeron.Close()
-	}
 	if node.sub != nil {
 		node.sub.Close()
 	}
 	if node.pub != nil {
 		node.pub.Close()
+	}
+	if node.aeron != nil {
+		node.aeron.Close()
 	}
 }
 
@@ -70,10 +70,10 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		// log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
-		// 	count, offset, length,
-		// 	string(inBuf.Next(int(length))),
-		// )
+		log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
+			count, offset, length,
+			string(inBuf.Next(int(length))),
+		)
 
 		count += 1
 	}
