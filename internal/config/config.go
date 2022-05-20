@@ -8,7 +8,8 @@ var (
 	QuoteMsgRate time.Duration = time.Second
 	TradeMsgRate time.Duration = 2 * time.Second
 
-	BatchSize = 1
+	BatchSize      = 1
+	MaxMessageSize = 1028
 
 	// Media driver
 	AeronDir           string

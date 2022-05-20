@@ -72,16 +72,16 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		// log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
-		// 	piped, offset, length,
-		// 	string(inBuf.Next(int(length))),
-		// )
+		log.Printf("[info] %8.d: Got a fragment offset: %d length: %d payload: %s\n",
+			piped, offset, length,
+			string(inBuf.Next(int(length))),
+		)
 
 		var res int64
 		for {
 			if res = node.pub.Offer(buffer, offset, length, nil); res > 0 {
 				piped += 1
-				log.Printf("[debug] piped: %v size: %v", piped, length)
+				// log.Printf("[debug] piped: %v size: %v", piped, length)
 				break
 			}
 			if !util.RetryPublicationResult(res) {

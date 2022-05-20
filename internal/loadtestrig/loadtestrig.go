@@ -10,9 +10,8 @@ import (
 )
 
 func Run(ctx context.Context, tcv transceiver.Transceiver) {
-	// msg := []byte("hello")
-	msg := generateMsg(100)
-	tcv.SendAndReceive(ctx, msg, 5, 20_000)
+	msg := generateMsg(64)
+	tcv.SendAndReceive(ctx, msg, 5, 10)
 	log.Println("[info] Histogram of RTT latencies in microseconds.")
 	fmt.Println("Bye!")
 }

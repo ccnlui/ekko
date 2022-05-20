@@ -70,14 +70,15 @@ func (tcv *AeronTransceiver) init() {
 	}
 	log.Println("[info] subscription connected to media driver:", tcv.sub)
 
-	inBuf := &bytes.Buffer{}
+	inBuf := bytes.NewBuffer(make([]byte, 0, config.MaxMessageSize))
 	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
+		timestamp := buffer.GetInt64(offset)
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
 		tcv.rcvdMsg += 1
-		// log.Printf("[debug] %8.d Got a fragment offset: %d length: %d payload: %s\n",
-		// 	tcv.rcvdMsg, offset, length, string(inBuf.Next(int(length))),
-		// )
+		log.Printf("[debug] %8.d Got a fragment timestamp: %d offset: %d length: %d payload: %s\n",
+			tcv.rcvdMsg, timestamp, offset, length, string(inBuf.Next(int(length))),
+		)
 	}
 	tcv.assembler = aeron.NewFragmentAssembler(onMessage, 512)
 }
@@ -112,10 +113,11 @@ func (tcv *AeronTransceiver) SendAndReceive(
 		batchSize   int = config.BatchSize
 	)
 
+	outBuf := make([]byte, config.MaxMessageSize)
 	idleStrategy := idlestrategy.Busy{}
 	for {
 
-		sent := tcv.SendWithNoRetry(msg, batchSize)
+		sent := tcv.SendWithNoRetry(atomic.MakeBuffer(outBuf), msg, batchSize)
 		sentMsg += sent
 		if totalNumMsg == sentMsg {
 			reportProgress(startTimeNs, nowNs, sentMsg)
@@ -174,12 +176,20 @@ func (tcv *AeronTransceiver) SendAndReceive(
 	return sentMsg
 }
 
-func (tcv *AeronTransceiver) SendWithNoRetry(msg []byte, num int) int {
+func (tcv *AeronTransceiver) SendWithNoRetry(outBuf *atomic.Buffer, msg []byte, num int) int {
 	sent := 0
-	outBuf := atomic.MakeBuffer([]byte(msg))
+
+	// timestamp
+	outBuf.PutInt64(0, time.Now().UnixNano())
+
+	// message
+	msgLength := int32(len(msg))
+	if msgLength > 0 {
+		outBuf.PutBytesArray(8, &msg, 0, msgLength)
+	}
 
 	for i := 0; i < num; i++ {
-		res := tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil)
+		res := tcv.pub.Offer(outBuf, 0, 8+msgLength, nil)
 		if err := util.CheckPublicationResult(res); err != nil {
 			log.Println("[error]", err)
 			break
