@@ -78,14 +78,14 @@ func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num
 			now := time.Now().UnixNano()
 			if tcv.quoteDelayer.onScheduleSend(now) {
 
-				msg := time.Now().Local().String()
+				// msg := time.Now().Local().String()
 				outBuf := atomic.MakeBuffer([]byte(msg))
 
 				var res int64
 				for {
 					if res = tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil); res > 0 {
 						sent += 1
-						log.Println("[debug] sent:", sent, msg)
+						log.Printf("[debug] sent: %v size: %v", sent, len(msg))
 						break
 					}
 					if !retryPublicationResult(res) {

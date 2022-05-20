@@ -53,7 +53,7 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 
 	inBuf := &bytes.Buffer{}
 	count := 1
-	handler := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
+	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
 		bytes := buffer.GetBytesArray(offset, length)
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
@@ -64,6 +64,7 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 		)
 		count += 1
 	}
+	assembler := aeron.NewFragmentAssembler(onMessage, 512)
 
 	idleStrategy := idlestrategy.Sleeping{SleepFor: time.Millisecond}
 	for {
@@ -72,7 +73,7 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 			return
 		}
 
-		fragmentsRead := node.sub.Poll(handler, 10)
+		fragmentsRead := node.sub.Poll(assembler.OnFragment, 10)
 		idleStrategy.Idle(fragmentsRead)
 	}
 }
