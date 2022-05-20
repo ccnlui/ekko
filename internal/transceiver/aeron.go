@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lirm/aeron-go/aeron"
+	"github.com/lirm/aeron-go/aeron/atomic"
 )
 
 type AeronTransceiver struct {
@@ -62,20 +63,59 @@ func (tcv *AeronTransceiver) Close() {
 func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, num int) {
 
 	count := 0
+	dropped := 0
 	for count < num {
 
 		if ctx.Err() != nil {
 			fmt.Println("Bye!")
 			return
 		}
+		if tcv.pub.IsConnected() {
+			now := time.Now().UnixNano()
+			if tcv.quoteDelayer.onScheduleSend(now) {
 
-		now := time.Now().UnixNano()
-		if tcv.quoteDelayer.onScheduleSend(now) {
+				msg := time.Now().Local().String()
+				outBuf := atomic.MakeBuffer([]byte(msg))
 
-			msg := time.Now().Local().String()
-			log.Println("[info] msg", msg)
-
+				var res int64
+				for res = tcv.pub.Offer(outBuf, 0, int32(len(msg)), nil); res <= 0; {
+					if !retryPublicationResult(res) {
+						dropped += 1
+						break
+					}
+				}
+				count += 1
+			}
 		}
+	}
+	log.Printf("[info] sent %v messages", count)
+}
 
+func retryPublicationResult(res int64) bool {
+	switch res {
+	case aeron.AdminAction, aeron.BackPressured:
+		log.Println("[debug] retry offer:", publicationErrorString(res))
+		return true
+	case aeron.NotConnected, aeron.MaxPositionExceeded, aeron.PublicationClosed:
+		log.Println("[error] failed to offer", publicationErrorString(res))
+		return false
+	}
+	return false
+}
+
+func publicationErrorString(res int64) string {
+	switch res {
+	case aeron.AdminAction:
+		return "ADMIN_ACTION"
+	case aeron.BackPressured:
+		return "BACK_PRESSURED"
+	case aeron.PublicationClosed:
+		return "CLOSED"
+	case aeron.NotConnected:
+		return "NOT_CONNECTED"
+	case aeron.MaxPositionExceeded:
+		return "MAX_POSITION_EXCEEDED"
+	default:
+		return "UNKNOWN"
 	}
 }

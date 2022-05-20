@@ -49,17 +49,17 @@ func (node *AeronEchoNode) Run(ctx context.Context) {
 	log.Println("[info] running aeron echo node!")
 
 	inBuf := &bytes.Buffer{}
-	counter := 0
+	count := 1
 	handler := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
 		bytes := buffer.GetBytesArray(offset, length)
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
 		fmt.Printf("%8.d: Got a fragment offset: %d length: %d payload: %s (buf:%s)\n",
-			counter, offset, length,
+			count, offset, length,
 			string(bytes),
 			string(inBuf.Next(int(length))),
 		)
-		counter += 1
+		count += 1
 	}
 
 	idleStrategy := idlestrategy.Sleeping{SleepFor: time.Millisecond}
