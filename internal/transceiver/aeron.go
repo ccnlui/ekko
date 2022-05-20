@@ -69,12 +69,14 @@ func (tcv *AeronTransceiver) init() {
 	}
 	log.Println("[info] subscription connected to media driver:", tcv.sub)
 
+	echoed := 0
 	inBuf := &bytes.Buffer{}
 	onMessage := func(buffer *atomic.Buffer, offset int32, length int32, header *logbuffer.Header) {
 		inBuf.Reset()
 		buffer.WriteBytes(inBuf, offset, length)
-		log.Printf("[info] Got a fragment offset: %d length: %d payload: %s\n",
-			offset, length, string(inBuf.Next(int(length))),
+		echoed += 1
+		log.Printf("[debug] %8.d Got a fragment offset: %d length: %d payload: %s\n",
+			echoed, offset, length, string(inBuf.Next(int(length))),
 		)
 	}
 	tcv.assembler = aeron.NewFragmentAssembler(onMessage, 512)
@@ -162,6 +164,7 @@ func (tcv *AeronTransceiver) SendAndReceive(
 	// receive before exit
 	deadline := time.Now().UnixNano() + RECEIVE_DEADLINE_NS
 	for rcvdMsg < sentMsg {
+		log.Printf("[debug] try receive before exit: received: %d sent: %d\n", rcvdMsg, sentMsg)
 		rcvd := tcv.Receive()
 		rcvdMsg += rcvd
 		idleStrategy.Idle(rcvd)
@@ -185,14 +188,13 @@ func (tcv *AeronTransceiver) SendWithNoRetry(msg []byte, num int) int {
 			break
 		}
 		sent += 1
-		log.Printf("[debug] sent: %v size: %v", sent, len(msg))
+		// log.Printf("[debug] sent: %v size: %v", sent, len(msg))
 	}
 	return sent
 }
 
 func (tcv *AeronTransceiver) Receive() int {
-	fragmentsRead := tcv.sub.Poll(tcv.assembler.OnFragment, 10)
-	return util.Min(fragmentsRead, 1)
+	return tcv.sub.Poll(tcv.assembler.OnFragment, 10)
 }
 
 func reportProgress(startTimeNs int64, nowNs int64, sentMsg int) int {
