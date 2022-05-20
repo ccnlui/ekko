@@ -18,7 +18,7 @@ func Run(ctx context.Context, transport string) {
 	defer t.Close()
 
 	msg := generateMsg(64)
-	t.SendAndReceive(ctx, msg, 5, 200_000)
+	t.SendAndReceive(ctx, msg, 5, 500_000)
 	log.Println("[info] Histogram of RTT latencies in microseconds.")
 	histogram.PercentilesPrint(os.Stdout, 5, 1000.0)
 	fmt.Println("Bye!")
