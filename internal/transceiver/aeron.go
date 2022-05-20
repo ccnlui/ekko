@@ -184,7 +184,9 @@ func (tcv *AeronTransceiver) SendWithNoRetry(msg []byte, num int) int {
 			log.Println("[debug] dropped:", util.PublicationErrorString(res), msg)
 			break
 		}
-		sent += 1
+		if res > 0 {
+			sent += 1
+		}
 		// log.Printf("[debug] sent: %v size: %v", sent, len(msg))
 	}
 	return sent
