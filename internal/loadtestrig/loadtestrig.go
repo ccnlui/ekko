@@ -3,31 +3,49 @@ package loadtestrig
 import (
 	"bytes"
 	"context"
+	"ekko/internal/config"
 	"ekko/internal/transceiver"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
 )
 
 func Run(ctx context.Context, transport string) {
 	histogram := hdrhistogram.New(1, 60_000_000_000, 3)
-	t := transceiver.NewTransceiver(transport, histogram)
-	defer t.Close()
+	tcv := transceiver.NewTransceiver(transport, histogram)
+	defer tcv.Close()
 
-	msg := generateMsg(64)
-	t.SendAndReceive(ctx, msg, 5, 500_000)
+	msg := generateMsg(config.MessageLength)
+
+	log.Printf("[info] Running warmup for %d iterations of %d messages each, with %d bytes payload and a burst size of %d...\n",
+		config.WarmUpIterations,
+		config.WarmUpMessageRate,
+		config.MessageLength,
+		config.BatchSize,
+	)
+	tcv.SendAndReceive(ctx, msg, config.WarmUpIterations, config.WarmUpMessageRate)
+	histogram.Reset()
+	tcv.Reset()
+
+	log.Printf("[info] Running measurement for %d iterations of %d messages each, with %d bytes payload and a burst size of %d...\n",
+		config.Iterations,
+		config.MessageRate,
+		config.MessageLength,
+		config.BatchSize,
+	)
+	tcv.SendAndReceive(ctx, msg, config.Iterations, config.MessageRate)
+
 	log.Println("[info] Histogram of RTT latencies in microseconds.")
 	histogram.PercentilesPrint(os.Stdout, 5, 1000.0)
 	fmt.Println("Bye!")
 }
 
-func generateMsg(n int) []byte {
+func generateMsg(msgLength int) []byte {
 	buf := bytes.Buffer{}
-	for i := 0; i < n; i++ {
-		buf.WriteString(strconv.FormatInt(int64(i), 10))
+	for i := 0; i < msgLength; i++ {
+		buf.WriteByte(0x42)
 	}
 	return buf.Bytes()
 }

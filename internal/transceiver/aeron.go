@@ -102,6 +102,10 @@ func (tcv *AeronTransceiver) Close() {
 	}
 }
 
+func (tcv *AeronTransceiver) Reset() {
+	tcv.rcvdMsg = 0
+}
+
 func (tcv *AeronTransceiver) SendAndReceive(
 	ctx context.Context, msg []byte,
 	iterations int, numMsg int,
