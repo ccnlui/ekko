@@ -35,10 +35,17 @@ func Run(ctx context.Context, transport string) {
 		config.MessageLength,
 		config.BatchSize,
 	)
-	tcv.SendAndReceive(ctx, msg, config.Iterations, config.MessageRate)
+	sentMessages := tcv.SendAndReceive(ctx, msg, config.Iterations, config.MessageRate)
 
 	log.Println("[info] Histogram of RTT latencies in microseconds.")
 	histogram.PercentilesPrint(os.Stdout, 5, 1000.0)
+
+	expectedMessages := config.Iterations * config.MessageRate
+	if sentMessages < expectedMessages {
+		msg := "[warn] Target message rate not achieved: expected to send %d messages in total but managed to send only %d messages\n"
+		log.Printf(msg, expectedMessages, sentMessages)
+	}
+
 	fmt.Println("Bye!")
 }
 
