@@ -8,7 +8,7 @@ import (
 )
 
 type Transceiver interface {
-	SendAndReceive(ctx context.Context, msg []byte, iteration int, numMsg int) int
+	SendAndReceive(ctx context.Context, msg []byte, iteration uint64, numMsg uint64) uint64
 	Close()
 	Reset()
 }
@@ -17,7 +17,8 @@ func NewTransceiver(transport string, histogram *hdrhistogram.Histogram) Transce
 	switch transport {
 	case "aeron":
 		return NewAeronTransceiver(histogram)
-
+	case "grpc":
+		return NewGrpcTransceiver(histogram)
 	default:
 		log.Fatal("[fatal] unknown transport", transport)
 	}

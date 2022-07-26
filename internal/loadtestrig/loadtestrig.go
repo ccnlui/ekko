@@ -26,7 +26,6 @@ func Run(ctx context.Context, transport string) {
 		config.BatchSize,
 	)
 	tcv.SendAndReceive(ctx, msg, config.WarmUpIterations, config.WarmUpMessageRate)
-	histogram.Reset()
 	tcv.Reset()
 
 	log.Printf("[info] Running measurement for %d iterations of %d messages each, with %d bytes payload and a burst size of %d...\n",
@@ -49,9 +48,9 @@ func Run(ctx context.Context, transport string) {
 	fmt.Println("Bye!")
 }
 
-func generateMsg(msgLength int) []byte {
+func generateMsg(msgLength uint64) []byte {
 	buf := bytes.Buffer{}
-	for i := 0; i < msgLength; i++ {
+	for i := uint64(0); i < msgLength; i++ {
 		buf.WriteByte(0x42)
 	}
 	return buf.Bytes()

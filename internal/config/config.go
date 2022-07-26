@@ -5,17 +5,14 @@ import (
 )
 
 var (
-	QuoteMsgRate time.Duration = time.Second
-	TradeMsgRate time.Duration = 2 * time.Second
-
 	// Benchmark params
-	WarmUpIterations  = 10
-	WarmUpMessageRate = 20_000
-	Iterations        = 10
-	MessageRate       = 500_000
-	MessageLength     = 128
-	BatchSize         = 1
-	MaxMessageSize    = 1028
+	WarmUpIterations  uint64 = 10
+	WarmUpMessageRate uint64 = 20_000
+	Iterations        uint64 = 10
+	MessageRate       uint64 = 500_000
+	MessageLength     uint64 = 128
+	BatchSize         uint64 = 1
+	MaxMessageSize    uint64 = 1028
 
 	// Media driver
 	AeronDir           string

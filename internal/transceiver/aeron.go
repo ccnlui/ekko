@@ -16,38 +16,19 @@ import (
 )
 
 type AeronTransceiver struct {
-	quoteMsgRate time.Duration
-	tradeMsgRate time.Duration
-
-	quoteDelayer delayer
-	tradeDelayer delayer
-
-	aeron *aeron.Aeron
-	pub   *aeron.Publication
-	sub   *aeron.Subscription
-
+	aeron     *aeron.Aeron
+	pub       *aeron.Publication
+	sub       *aeron.Subscription
 	assembler *aeron.FragmentAssembler
-	rcvdMsg   int
+	rcvdMsg   uint64
 	histogram *hdrhistogram.Histogram
 }
 
 func NewAeronTransceiver(histogram *hdrhistogram.Histogram) *AeronTransceiver {
-	log.Println("[info] new aeron transport!")
+	log.Println("[info] new aeron transceiver!")
 
-	qmr := config.QuoteMsgRate
-	tmr := config.TradeMsgRate
-	qd := delayer{
-		interval: qmr.Nanoseconds(),
-	}
-	td := delayer{
-		interval: tmr.Nanoseconds(),
-	}
 	tcv := &AeronTransceiver{
-		quoteMsgRate: qmr,
-		tradeMsgRate: tmr,
-		quoteDelayer: qd,
-		tradeDelayer: td,
-		histogram:    histogram,
+		histogram: histogram,
 	}
 	tcv.init()
 	return tcv
@@ -104,24 +85,21 @@ func (tcv *AeronTransceiver) Close() {
 
 func (tcv *AeronTransceiver) Reset() {
 	tcv.rcvdMsg = 0
+	tcv.histogram.Reset()
 }
 
-func (tcv *AeronTransceiver) SendAndReceive(
-	ctx context.Context, msg []byte,
-	iterations int, numMsg int,
-) int {
-
+func (tcv *AeronTransceiver) SendAndReceive(ctx context.Context, msg []byte, iteration uint64, numMsg uint64) uint64 {
 	var (
 		startTimeNs      int64 = time.Now().UnixNano()
-		endTimeNs        int64 = startTimeNs + int64(iterations)*NANOS_PER_SECOND
+		endTimeNs        int64 = startTimeNs + int64(iteration)*NANOS_PER_SECOND
 		sendIntervalNs   int64 = NANOS_PER_SECOND / int64(numMsg)
 		nextSendTimeNs   int64 = startTimeNs
 		nextReportTimeNs int64 = startTimeNs + NANOS_PER_SECOND
 		nowNs            int64 = startTimeNs
 
-		totalNumMsg int = iterations * numMsg
-		sentMsg     int = 0
-		batchSize   int = config.BatchSize
+		totalNumMsg uint64 = iteration * numMsg
+		sentMsg     uint64 = 0
+		batchSize   uint64 = config.BatchSize
 	)
 
 	outBuf := make([]byte, config.MaxMessageSize)
@@ -187,8 +165,8 @@ func (tcv *AeronTransceiver) SendAndReceive(
 	return sentMsg
 }
 
-func (tcv *AeronTransceiver) SendWithNoRetry(outBuf *atomic.Buffer, msg []byte, num int) int {
-	sent := 0
+func (tcv *AeronTransceiver) SendWithNoRetry(outBuf *atomic.Buffer, msg []byte, num uint64) uint64 {
+	sent := uint64(0)
 
 	// timestamp
 	outBuf.PutInt64(0, time.Now().UnixNano())
@@ -199,7 +177,7 @@ func (tcv *AeronTransceiver) SendWithNoRetry(outBuf *atomic.Buffer, msg []byte, 
 		outBuf.PutBytesArray(8, &msg, 0, msgLength)
 	}
 
-	for i := 0; i < num; i++ {
+	for i := uint64(0); i < num; i++ {
 		res := tcv.pub.Offer(outBuf, 0, 8+msgLength, nil)
 		if err := util.CheckPublicationResult(res); err != nil {
 			log.Println("[error]", err)
@@ -215,17 +193,4 @@ func (tcv *AeronTransceiver) SendWithNoRetry(outBuf *atomic.Buffer, msg []byte, 
 
 func (tcv *AeronTransceiver) Receive() int {
 	return tcv.sub.Poll(tcv.assembler.OnFragment, 10)
-}
-
-func reportProgress(startTimeNs int64, nowNs int64, sentMsg int) int {
-	elapsedSec := int((nowNs - startTimeNs)) / NANOS_PER_SECOND
-	var sendRate int
-	switch elapsedSec {
-	case 0:
-		sendRate = sentMsg
-	default:
-		sendRate = sentMsg / elapsedSec
-	}
-	log.Printf("[info] send rate %d msg/sec\n", sendRate)
-	return elapsedSec
 }
