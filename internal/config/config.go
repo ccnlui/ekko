@@ -24,4 +24,7 @@ var (
 	ServerChannel      string        = "aeron:udp?endpoint=localhost:40123"
 	ClientStreamID     int           = 9000
 	ClientChannel      string        = "aeron:udp?endpoint=localhost:40321"
+
+	// Grpc
+	ServerAddr string = "localhost:9090"
 )
