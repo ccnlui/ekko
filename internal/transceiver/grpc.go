@@ -134,7 +134,7 @@ func (tcv *GrpcTransceiver) Receive(notifyDone chan struct{}, stream proto.Ekko_
 
 		atomic.AddUint64(&tcv.rcvdMsg, 1)
 		tcv.histogram.RecordValue(time.Now().UnixNano() - int64(resp.Timestamp))
-		log.Println("got: ", resp)
+		// log.Println("got: ", resp)
 	}
 }
 
