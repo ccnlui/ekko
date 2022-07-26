@@ -14,6 +14,8 @@ func NewEchoNode(transport string) EchoNode {
 	switch transport {
 	case "aeron":
 		return NewAeronEchoNode()
+	case "grpc":
+		return NewGrpcEchoNode()
 	default:
 		log.Fatal("[fatal] unknown transport", transport)
 	}
