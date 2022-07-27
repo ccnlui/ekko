@@ -86,7 +86,7 @@ func (node *GrpcEchoNode) BidirectionalStreamingEcho(stream proto.Ekko_Bidirecti
 			return err
 		}
 		resp := &proto.EchoResponse{
-			Timestamp: uint64(time.Now().UnixNano()),
+			Timestamp: req.Timestamp,
 			Payload:   req.Payload,
 		}
 		if err := stream.Send(resp); err != nil {
