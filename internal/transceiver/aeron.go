@@ -35,7 +35,7 @@ func NewAeronTransceiver(histogram *hdrhistogram.Histogram) *AeronTransceiver {
 }
 
 func (tcv *AeronTransceiver) init() {
-	aeronCtx := aeron.NewContext().AeronDir(config.AeronDir)
+	aeronCtx := aeron.NewContext().AeronDir(config.AeronDir).MediaDriverTimeout(config.MediaDriverTimeout)
 	a, err := aeron.Connect(aeronCtx)
 	if err != nil {
 		log.Fatalln("[fatal] failed to connect to media driver: ", config.AeronDir, err.Error())
