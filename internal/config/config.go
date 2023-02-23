@@ -18,9 +18,11 @@ var (
 	AeronDir           string
 	MediaDriverTimeout time.Duration = 10 * time.Second
 	ServerStreamID     int           = 8000
-	ServerChannel      string        = "aeron:udp?endpoint=localhost:40123"
+	ServerChannel      string        = "aeron:ipc"
+	ClientChannel      string        = "aeron:ipc"
 	ClientStreamID     int           = 9000
-	ClientChannel      string        = "aeron:udp?endpoint=localhost:40321"
+	// ServerChannel      string        = "aeron:udp?endpoint=localhost:40123"
+	// ClientChannel      string        = "aeron:udp?endpoint=localhost:40321"
 
 	// Grpc
 	ServerAddr string = "localhost:9090"
