@@ -19,8 +19,8 @@ var (
 	MediaDriverTimeout time.Duration = 10 * time.Second
 	ServerStreamID     int           = 8000
 	ServerChannel      string        = "aeron:ipc"
-	ClientChannel      string        = "aeron:ipc"
 	ClientStreamID     int           = 9000
+	ClientChannel      string        = "aeron:ipc"
 	// ServerChannel      string        = "aeron:udp?endpoint=localhost:40123"
 	// ClientChannel      string        = "aeron:udp?endpoint=localhost:40321"
 
