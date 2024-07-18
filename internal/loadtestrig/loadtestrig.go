@@ -36,7 +36,7 @@ func Run(ctx context.Context, transport string) {
 	)
 	sentMessages := tcv.SendAndReceive(ctx, msg, config.Iterations, config.MessageRate)
 
-	log.Println("[info] Histogram of RTT latencies in microseconds.")
+	log.Println("[info] Histogram of RTT latencies in nanoseconds.")
 	histogram.PercentilesPrint(os.Stdout, 5, 1.0)
 
 	expectedMessages := config.Iterations * config.MessageRate
